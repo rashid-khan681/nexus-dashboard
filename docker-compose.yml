@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: nexus_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql
+    networks:
+      - nexus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nexus_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: rashidkhan6685/nexus-backend:v1
+    container_name: nexus_backend
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    env_file:
+      - .env
+    networks:
+      - nexus-net
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nexus_frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - nexus-net
+    depends_on:
+      - backend
+
+networks:
+  nexus-net:
+    driver: bridge
+
+volumes:
+  pg_data:

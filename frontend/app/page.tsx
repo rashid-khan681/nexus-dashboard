@@ -20,7 +20,10 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const socket = io('http://localhost:5001');
+    const socketUrl = typeof window !== 'undefined' 
+      ? `http://${window.location.hostname}:5000` 
+      : 'http://localhost:5000';
+    const socket = io(socketUrl);
     
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
