@@ -39,6 +39,9 @@ routing without manual intervention.
 See `nexus-architecture-diagram.png` for the full deployed architecture, 
 including the Active-Passive failover flow.
 
+## Architecture Diagram of Nexus-Dashboard
+![Nexus Prime Architecture](architecture-diagram.png)
+
 ## Prerequisites (Local Development Only)
 
 - Node.js v20.0.0 or higher
@@ -121,6 +124,3 @@ Both images are available on Docker Hub:
 | `POSTGRES_DB` | PostgreSQL database name |
 | `GEMINI_API_KEY` | Google Gemini API key for AI diagnostics |
 | `DATABASE_URL` | Full Postgres connection string (use Docker service name `database` as host in production) |
-
-## Architecture Diagram of Nexus-Dashboard
-![Nexus Prime Architecture](architecture-diagram.png)
