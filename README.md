@@ -26,6 +26,7 @@ routing without manual intervention.
   reliable data tier storage.
 - **Fully Containerized:** Multi-stage Docker builds, orchestrated 
   with Docker Compose, deployed on AWS EC2.
+- **Dynamic Client Routing:** Eliminates hardcoded IPs by using `window.location.hostname` to auto-resolve WebSocket connections seamlessly across any AWS EC2 instance.
 
 ## System Architecture
 
@@ -54,7 +55,7 @@ including the Active-Passive failover flow.
    DATABASE_URL=postgresql://user:password@localhost:5432/nexus_db
 ```
 3. Run `npm install` and start development servers in both 
-   `/frontend` (port 3000) and `/backend` (port 5001).
+   `/frontend` (port 3000) and `/backend` (port 5000).
 
 ## Docker Deployment (Completed)
 
@@ -86,8 +87,7 @@ Docker Compose.
 
 4. Open the app:
    - Frontend: `http://<your-ec2-ip>:3000`
-   - Backend API: `http://<your-ec2-ip>:5000` (and `5001` for the 
-     WebSocket/Socket.io connection)
+   - Backend API & WebSocket: `http://<your-ec2-ip>:5000`
 
 ## Docker Hub
 
