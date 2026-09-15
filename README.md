@@ -92,6 +92,11 @@ Docker Compose.
    - Frontend: `http://<your-ec2-ip>:3000`
    - Backend API & WebSocket: `http://<your-ec2-ip>:5000`
 
+## Finale Image Size
+
+- **Frontend:** 299MB
+- **Backend:** 391MB
+
 ## Docker Hub
 
 Both images are available on Docker Hub:
