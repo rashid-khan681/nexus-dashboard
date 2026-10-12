@@ -39,6 +39,9 @@ routing without manual intervention.
 See `nexus-architecture-diagram.png` for the full deployed architecture, 
 including the Active-Passive failover flow.
 
+## Architecture Diagram of Nexus-Dashboard
+![Nexus Prime Architecture](architecture-diagram.png)
+
 ## Prerequisites (Local Development Only)
 
 - Node.js v20.0.0 or higher
@@ -88,6 +91,11 @@ Docker Compose.
 4. Open the app:
    - Frontend: `http://<your-ec2-ip>:3000`
    - Backend API & WebSocket: `http://<your-ec2-ip>:5000`
+
+## Finale Image Size
+
+- **Frontend:** 299MB
+- **Backend:** 391MB
 
 ## Docker Hub
 
