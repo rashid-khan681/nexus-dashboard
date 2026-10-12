@@ -18,11 +18,12 @@ export default function Dashboard() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  useEffect(() => {
-    const socketUrl = typeof window !== 'undefined' 
-      ? `http://${window.location.hostname}:5000` 
-      : 'http://localhost:5000';
+  
+useEffect(() => {
+  const apiPort = process.env.NEXT_PUBLIC_API_PORT || '5000';
+    const socketUrl = typeof window !== 'undefined'
+      ? `http://${window.location.hostname}:${apiPort}`
+      : `http://localhost:${apiPort}`;
     const socket = io(socketUrl);
     
     socket.on('connect', () => setIsConnected(true));

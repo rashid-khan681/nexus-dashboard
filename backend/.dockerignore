@@ -1,12 +1,8 @@
 node_modules
 npm-debug.log
-.next
-out
-build
-dist
 .env
-.DS_Store
-.vscode
+.env.*
 .git
+.gitignore
 Dockerfile
-docker-compose.yml
+README.md
