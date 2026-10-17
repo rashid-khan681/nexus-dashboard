@@ -1,3 +1,7 @@
+# Local development stack: builds every image from source and serves the app on http://localhost:8080
+#   docker compose up --build
+# Variables are read from the .env file next to this file (see .env.example).
+
 services:
   database:
     image: postgres:15-alpine
@@ -8,8 +12,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
     volumes:
-      # Official image data directory. Mounting the parent folder would silently
-      # create an anonymous volume and lose data when the container is recreated.
+      # The official image keeps its data in /var/lib/postgresql/data. Mounting the parent
+      # folder would silently create an anonymous volume and lose data on recreate.
       - pg_data:/var/lib/postgresql/data
     networks:
       - nexus-net
@@ -21,15 +25,18 @@ services:
 
   backend:
     build: ./backend
-    image: rashidkhan6685/nexus-backend:v2
     container_name: nexus_backend
     restart: unless-stopped
-    env_file: .env
     environment:
       PORT: "5000"
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
-    ports:
-      - "5000:5000"
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      AI_MAX_CALLS_PER_HOUR: ${AI_MAX_CALLS_PER_HOUR:-30}
+      RETENTION_DAYS: ${RETENTION_DAYS:-10}
+    expose:
+      - "5000"
     depends_on:
       database:
         condition: service_healthy
@@ -37,15 +44,28 @@ services:
       - nexus-net
 
   frontend:
-    build: ./frontend
-    image: rashidkhan6685/nexus-frontend:v2
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_MODE: same-origin
     container_name: nexus_frontend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - nexus-net
+
+  nginx-proxy:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
     networks:
       - nexus-net
 

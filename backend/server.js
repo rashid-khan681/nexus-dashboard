@@ -142,14 +142,18 @@ async function tick() {
 
 async function historyForAlert(alert) {
   if (alert.status !== 'resolved') return history;
-  // Resolved incident: rebuild the evidence window from stored samples.
+  // Resolved incident: rebuild the evidence window from the samples closest to the end of the
+  // incident. Bounding by last_seen_at (not resolved_at) keeps the window honest even when the
+  // backend was stopped between the last breach and the resolution.
   const res = await db.query(
-    `SELECT extract(epoch FROM ts) * 1000 AS ts, cpu_pct, mem_pct, disk_pct, load1,
-            db_latency_ms, loop_lag_ms, sockets
-     FROM metric_samples
-     WHERE ts BETWEEN $1::timestamptz - interval '2 minutes' AND COALESCE($2::timestamptz, now())
-     ORDER BY ts ASC LIMIT 200`,
-    [alert.opened_at, alert.resolved_at]
+    `SELECT * FROM (
+       SELECT extract(epoch FROM ts) * 1000 AS ts, cpu_pct, mem_pct, disk_pct, load1,
+              db_latency_ms, loop_lag_ms, sockets
+       FROM metric_samples
+       WHERE ts BETWEEN $1::timestamptz - interval '2 minutes' AND $2::timestamptz + interval '30 seconds'
+       ORDER BY ts DESC LIMIT 60
+     ) recent ORDER BY ts ASC`,
+    [alert.opened_at, alert.last_seen_at]
   );
   return res.rows.map((r) => ({ ...r, ts: Number(r.ts), db_ok: null }));
 }
@@ -345,9 +349,10 @@ api.get(
     const samples = await db.query(
       `SELECT ts, cpu_pct, mem_pct, disk_pct, load1, db_latency_ms, loop_lag_ms, sockets
        FROM metric_samples
-       WHERE ts BETWEEN $1::timestamptz - interval '5 minutes' AND COALESCE($2::timestamptz, now())
+       WHERE ts BETWEEN $1::timestamptz - interval '5 minutes'
+                    AND LEAST(COALESCE($2::timestamptz, now()), $3::timestamptz + interval '2 minutes')
        ORDER BY ts ASC LIMIT 500`,
-      [alert.opened_at, alert.resolved_at]
+      [alert.opened_at, alert.resolved_at, alert.last_seen_at]
     );
     return res.json({ alert, analyses: analyses.rows, samples: samples.rows });
   })

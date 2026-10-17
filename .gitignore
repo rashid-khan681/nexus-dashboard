@@ -27,3 +27,8 @@ nexus.db
 # IDEs and Editors
 .vscode/
 .idea/
+.env
+dist/
+node_modules/
+.next/
+.DS_Store

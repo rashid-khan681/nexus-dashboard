@@ -72,6 +72,11 @@ CREATE INDEX IF NOT EXISTS idx_events_ts ON events (ts DESC);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Node can throw an AggregateError with an empty message (IPv4 + IPv6 refused), so fall back to the error code. */
+function describeError(err) {
+  return err.message || err.code || (err.errors && err.errors[0] && err.errors[0].code) || String(err);
+}
+
 function getPool() {
   if (!pool) throw new Error('Database is not initialised. Call init() first.');
   return pool;
@@ -106,11 +111,11 @@ async function init({ retries = 15, delayMs = 2000 } = {}) {
       return;
     } catch (err) {
       lastError = err;
-      console.warn(`[db] connection attempt ${attempt}/${retries} failed: ${err.message}`);
+      console.warn(`[db] connection attempt ${attempt}/${retries} failed: ${describeError(err)}`);
       await sleep(delayMs);
     }
   }
-  throw new Error(`Could not connect to the database: ${lastError && lastError.message}`);
+  throw new Error(`Could not connect to the database: ${lastError && describeError(lastError)}`);
 }
 
 /** Measures a real round trip to PostgreSQL. Never throws. */

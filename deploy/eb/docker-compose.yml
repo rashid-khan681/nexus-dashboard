@@ -1,0 +1,63 @@
+# Elastic Beanstalk (Docker platform) stack. Uploaded as part of the zip bundle.
+# Values come from the Beanstalk "Environment properties", which Beanstalk writes to a .env file
+# next to this file. IMPORTANT: never put your own .env file inside the bundle, otherwise
+# Beanstalk will not generate its own.
+#
+# Do not use ${VAR:?error} in this file: Beanstalk validates the compose file before the .env
+# file exists, and a hard error would fail the whole deployment.
+
+services:
+  database:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nexus_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-nexus_db}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: rashidkhan6685/nexus-backend:${IMAGE_TAG:-v2}
+    restart: unless-stopped
+    environment:
+      PORT: "5000"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus_user}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-nexus_db}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+      AI_MAX_CALLS_PER_HOUR: ${AI_MAX_CALLS_PER_HOUR:-30}
+      RETENTION_DAYS: ${RETENTION_DAYS:-10}
+    expose:
+      - "5000"
+    depends_on:
+      database:
+        condition: service_healthy
+
+  frontend:
+    image: rashidkhan6685/nexus-frontend:${IMAGE_TAG:-v2}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  nginx-proxy:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/log/nginx:/var/log/nginx"
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  pg_data:

@@ -1,131 +1,117 @@
-# Nexus Prime Dashboard
+# Nexus Prime
 
-A real-time, 3-tier infrastructure telemetry dashboard built to 
-visualize network topology, compute allocation, and socket connections 
-with microsecond latency.
+**Real-time infrastructure monitoring that fights alert fatigue.**
 
-## Core Problem Solved
+Small teams running payment or e-commerce services get buried in repeated alerts, and the one that matters gets missed.
+Nexus Prime watches a host in real time and turns a stream of threshold breaches into a small number of meaningful incidents.
 
-Modern distributed systems lack unified, real-time observability. 
-Nexus Prime bridges this gap by providing an instantaneous, 
-WebSocket-driven dashboard that monitors live server health, network 
-routing efficiency, and compute loads. It integrates an AI analysis 
-engine to proactively verify system efficiency and optimal network 
-routing without manual intervention.
+> Built for the TrainWithShubham **#BuildOnElasticBeanstalk** hackathon.
 
-## Key Features
+## What it does
 
-- **Real-Time Telemetry:** Bi-directional WebSocket streaming for 
-  zero-refresh DOM updates.
-- **AI-Driven Diagnostics:** Automated system health and routing 
-  analysis using Google Gemini, orchestrated via LangChain.
-- **Active-Passive DR Simulation:** Logical primary/standby node 
-  architecture (ap-south-1 / ap-south-2) with automatic AI-triggered 
-  failover when compute load reaches 100%.
-- **Persistent State Management:** PostgreSQL integration for 
-  reliable data tier storage.
-- **Fully Containerized:** Multi-stage Docker builds, orchestrated 
-  with Docker Compose, deployed on AWS EC2.
-- **Dynamic Client Routing:** Eliminates hardcoded IPs by using `window.location.hostname` to auto-resolve WebSocket connections seamlessly across any AWS EC2 instance.
+- **Real metrics, no simulation.** CPU, memory, disk, load, network, database latency and Node.js event-loop lag are measured on the host that runs the backend. Browser-to-server round-trip time is measured over the live Socket.IO connection.
+- **Alert-fatigue reduction.** An alert opens only after 3 consecutive bad samples and resolves only after 5 good ones. Repeats are merged into one alert and severity escalates instead of re-alerting. The Alerts tab shows how many breaches were merged into how many alerts.
+- **Evidence-grounded AI analysis (optional).** For any incident, Gemini (via LangChain) is asked for a structured explanation using only the recorded evidence. Answers that cite numbers not present in the evidence are rejected. If no API key is set or the model is unavailable, a clearly labelled **rules-only** analysis is shown instead.
+- **Live dashboard.** Animated KPI strip, ping gauge, service topology (browser, backend, PostgreSQL, AI, all measured), history charts from 15 minutes to 7 days, incident drawer with acknowledge and evidence table, and a searchable live event log.
+- **Honest scope.** The System tab lists what is and is not measured.
 
-## System Architecture
+## Architecture
 
-- **Presentation Tier (Frontend):** Next.js and React
-- **Application Tier (Backend):** Node.js server using Socket.io for 
-  live data streaming and LangChain for AI model orchestration
-- **Data Tier (Database):** PostgreSQL 15 for state persistence and 
-  structured telemetry logs
-
-See `nexus-architecture-diagram.png` for the full deployed architecture, 
-including the Active-Passive failover flow.
-
-## Architecture Diagram of Nexus-Dashboard
-![Nexus Prime Architecture](architecture-diagram.png)
-
-## Prerequisites (Local Development Only)
-
-- Node.js v20.0.0 or higher
-- PostgreSQL v15.0 or higher
-- Google Gemini API Key
-- Docker & Docker Compose (for containerized deployment)
-
-## Local Development Setup (without Docker)
-
-1. Clone the repository.
-2. Set up environment variables in a root `.env` file:
-```
-   GEMINI_API_KEY=your_key_here
-   DATABASE_URL=postgresql://user:password@localhost:5432/nexus_db
-```
-3. Run `npm install` and start development servers in both 
-   `/frontend` (port 3000) and `/backend` (port 5000).
-
-## Docker Deployment (Completed)
-
-The application is fully containerized and deployed on AWS EC2 using 
-Docker Compose.
-
-1. Clone the repo:
-```bash
-   git clone https://github.com/rashid-khan681/nexus-dashboard.git
-   cd nexus-dashboard
+```mermaid
+flowchart LR
+  U[Browser] -->|HTTP :80| N[nginx reverse proxy]
+  N -->|/| F[Next.js frontend :3000]
+  N -->|/api, /health, /socket.io| B[Node.js backend :5000]
+  B --> P[(PostgreSQL)]
+  B -.optional.-> G[Gemini API]
 ```
 
-2. Create a `.env` file in the root directory:
-```
-   POSTGRES_USER=<your-value>
-   POSTGRES_PASSWORD=<your-value>
-   POSTGRES_DB=<your-value>
-   GEMINI_API_KEY=<your-value>
-   DATABASE_URL=postgresql://<user>:<password>@database:5432/<db>
-```
-   Note: `DATABASE_URL` uses `database` (the Docker service name) as 
-   the host, not `localhost` — since the backend connects to Postgres 
-   over the internal Docker network.
+nginx is the single public entry point. The browser talks to one origin, so there is no CORS setup and WebSockets pass through the same port. This is also the layout Elastic Beanstalk expects for Docker Compose applications.
 
-3. Start everything:
-```bash
-   docker compose up -d
-```
+## Tech stack
 
-4. Open the app:
-   - Frontend: `http://<your-ec2-ip>:3000`
-   - Backend API & WebSocket: `http://<your-ec2-ip>:5000`
-
-## Finale Image Size
-
-- **Frontend:** 299MB
-- **Backend:** 391MB
-
-## Docker Hub
-
-Both images are available on Docker Hub:
-
-- **Backend:** [rashidkhan6685/nexus-backend](https://hub.docker.com/r/rashidkhan6685/nexus-backend)
-```bash
-  docker pull rashidkhan6685/nexus-backend:v1
-```
-- **Frontend:** [rashidkhan6685/nexus-frontend](https://hub.docker.com/r/rashidkhan6685/nexus-frontend)
-```bash
-  docker pull rashidkhan6685/nexus-frontend
-```
-
-## Security & Reliability Notes
-
-- PostgreSQL has no publicly exposed port — reachable only within the 
-  internal Docker network (`nexus-net`)
-- Backend only starts after the database passes its `pg_isready` 
-  healthcheck (`depends_on: condition: service_healthy`)
-- Telemetry data persists across restarts via a named Docker volume 
-  (`pg_data`)
-- Configuration loaded via `.env` file — never hardcoded
-
-## Environment Variables Reference
-
-| Variable | Description |
+| Layer | Technology |
 |---|---|
-| `POSTGRES_USER` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | PostgreSQL password |
-| `POSTGRES_DB` | PostgreSQL database name |
-| `GEMINI_API_KEY` | Google Gemini API key for AI diagnostics |
-| `DATABASE_URL` | Full Postgres connection string (use Docker service name `database` as host in production) |
+| Frontend | Next.js (App Router), React, Tailwind CSS 4, Framer Motion, Recharts |
+| Backend | Node.js, Express, Socket.IO |
+| Database | PostgreSQL 15 |
+| AI (optional) | Google Gemini through LangChain |
+| Proxy | nginx |
+| Containers | Docker, Docker Compose (multi-stage builds, non-root users, healthchecks) |
+| Deployment | AWS Elastic Beanstalk (Docker platform, single instance) |
+| CI | GitHub Actions |
+
+## Run it locally
+
+Requirements: Docker with Docker Compose.
+
+```bash
+cp .env.example .env        # then set POSTGRES_PASSWORD to a long random value
+docker compose up --build
+```
+
+Open **http://localhost:8080**.
+
+## Configuration
+
+All settings are environment variables (see `.env.example`).
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database credentials (use URL-safe characters) | required |
+| `ADMIN_TOKEN` | Protects acknowledge, explain and AI-test endpoints | empty (open) |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | Enable AI analysis. Without them the app runs in rules-only mode | empty |
+| `AI_MAX_CALLS_PER_HOUR` | Rate limit for AI calls | 30 |
+| `RETENTION_DAYS` | How long samples and alerts are kept | 10 |
+| `CPU_WARN`, `CPU_CRIT`, `MEM_WARN`, `MEM_CRIT`, `DISK_WARN`, `DISK_CRIT`, `DB_LAT_WARN`, `DB_LAT_CRIT`, `LOOP_WARN`, `LOOP_CRIT` | Alert thresholds | 70/85, 80/90, 80/90, 100/500, 100/300 |
+| `ALERT_TRIGGER_SAMPLES`, `ALERT_RESOLVE_SAMPLES` | Consecutive samples to open and resolve an alert | 3 and 5 |
+
+## API
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Liveness probe |
+| `GET /api/health` | Service, database and AI status |
+| `GET /api/summary` | Latest sample, open alerts, noise reduction, thresholds |
+| `GET /api/metrics?range=` | Metric history |
+| `GET /api/alerts`, `GET /api/alerts/:id` | Alert list and incident detail with evidence |
+| `POST /api/alerts/:id/ack` | Acknowledge (admin token if set) |
+| `POST /api/alerts/:id/explain` | On-demand AI or rules-only analysis (admin token if set) |
+| `GET /api/ai/status`, `POST /api/ai/test` | AI availability and test call |
+
+Socket.IO events: `hello`, `telemetry`, `alert_update`, `ai_analysis`, `log_event`.
+
+## Deploy to AWS Elastic Beanstalk
+
+```bash
+docker login
+bash deploy/build-and-push.sh v2      # builds linux/amd64 images and pushes them to Docker Hub
+bash deploy/make-eb-bundle.sh         # creates dist/nexus-eb.zip
+```
+
+Upload `dist/nexus-eb.zip` to a new Elastic Beanstalk environment (Docker platform, single instance, `t3.small`) and set the environment properties `POSTGRES_PASSWORD` and `ADMIN_TOKEN` (and optionally `GEMINI_API_KEY`, `GEMINI_MODEL`). Full steps with screenshots are in [`docs/DEVOPS-JOURNEY.md`](docs/DEVOPS-JOURNEY.md).
+
+## Project structure
+
+```
+backend/      Node.js API, collector, alert engine, AI controller
+frontend/     Next.js dashboard
+nginx/        Reverse proxy image and config
+deploy/       Image build script, Beanstalk bundle script, Beanstalk compose and platform hook
+docs/         DevOps walkthrough and submission material
+docker-compose.yml   Local stack (builds from source)
+```
+
+## Known limitations
+
+- Monitors **one host** (the one running the backend). No multi-host agents yet.
+- No external endpoint checks, packet-loss measurement or multi-region failover.
+- No automated test suite yet. CI currently checks that both apps build and that all images build.
+- AI analysis needs your own Gemini key and model ID.
+
+## Roadmap
+
+- Synthetic external endpoint checks (for example, a payment API health probe)
+- Automated deployment from GitHub Actions
+- Backend unit and integration tests
+- Lightweight agents for multi-host monitoring
