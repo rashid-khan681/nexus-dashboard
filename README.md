@@ -115,3 +115,13 @@ docker-compose.yml   Local stack (builds from source)
 - Automated deployment from GitHub Actions
 - Backend unit and integration tests
 - Lightweight agents for multi-host monitoring
+
+## Screenshots
+
+| Live dashboard | Incident with evidence |
+|---|---|
+| ![Dashboard](docs/screenshots/01-dashboard-live.png) | ![Incident](docs/screenshots/06-incident-drawer.png) |
+
+| System tab (what is measured) | Running on AWS Elastic Beanstalk |
+|---|---|
+| ![System](docs/screenshots/02-system-tab.png) | ![Elastic Beanstalk](docs/screenshots/07-eb-dashboard-live.png) |
