@@ -1,5 +1,7 @@
 # Nexus Prime
 
+![CI](https://github.com/rashid-khan681/nexus-dashboard/actions/workflows/ci.yml/badge.svg)
+
 **Real-time infrastructure monitoring that fights alert fatigue.**
 
 Small teams running payment or e-commerce services get buried in repeated alerts, and the one that matters gets missed.
